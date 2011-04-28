@@ -33,7 +33,9 @@ module ActionController
         if test_mode 
           before_filter :force_mobile_format
         else
+          before_filter :check_mobile_param
           before_filter :set_mobile_format
+          after_filter :clear_mobile_session
         end
 
         helper_method :is_mobile_device?
@@ -63,6 +65,21 @@ module ActionController
         session[:mobile_view] = true if session[:mobile_view].nil?
       end
       
+      # allow for 'm' parameter with override mode.
+  
+      def check_mobile_param
+        mobile_param = request.params[:m]
+        if is_mobile_device? and !request.xhr?
+          if mobile_param == "override" or mobile_param == "false"
+            session[:mobile_view] = false
+          end
+        else
+          if mobile_param == "true"
+            force_mobile_format
+          end
+        end
+      end
+      
       # Determines the request format based on whether the device is mobile or if
       # the user has opted to use either the 'Standard' view or 'Mobile' view.
       
@@ -71,6 +88,12 @@ module ActionController
           request.format = session[:mobile_view] == false ? :html : :mobile
           session[:mobile_view] = true if session[:mobile_view].nil?
         end
+      end
+      
+      # clear the session after each request
+      
+      def clear_mobile_session
+        session[:mobile_view] = nil
       end
       
       # Returns either true or false depending on whether or not the format of the
